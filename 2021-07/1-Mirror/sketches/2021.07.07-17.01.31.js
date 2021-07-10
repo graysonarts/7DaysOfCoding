@@ -6,7 +6,7 @@ const draw = require("./draw");
 
 const LINE_THRESHOLD = 0.75;
 const MAX_POINTS = 1000;
-const RELAX_SCALE = 0.0005;
+const RELAX_SCALE = 0.00025;
 const FPS = 30.0;
 const NEW_EVERY = Math.floor(FPS / 2.0);
 
