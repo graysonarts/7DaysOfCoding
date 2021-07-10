@@ -6,9 +6,9 @@ const draw = require("./draw");
 
 const LINE_THRESHOLD = 0.75;
 const MAX_POINTS = 1000;
-const RELAX_SCALE = 0.005;
+const RELAX_SCALE = 0.001;
 const FPS = 30.0;
-const NEW_EVERY = FPS / 8.0;
+const NEW_EVERY = Math.floor(FPS / 8.0);
 
 let nodes = [];
 let links = [];
@@ -37,7 +37,7 @@ const intersection = (aa, bb) => {
   }
 
   const ba = vec2.sub(a0, b0);
-  const q = vec2.cross(sa, sb) / u;
+  const q = vec2.cross(sa, ba) / u;
   const p = vec2.cross(sb, ba) / u;
 
   return {
@@ -97,9 +97,11 @@ const findNeighboringIntersection = (intersections, link) => {
 
 const addIntersection = (pt, link) => {
   links = links.filter((lnk) => lnk !== link);
-  nodes.push(pt);
-  links.push([link[0], nodes.length - 1]);
-  links.push([link[1], nodes.length - 1]);
+  const nodeIdx = nodes.push(pt) - 1;
+  links.push([link[0], nodeIdx]);
+  links.push([link[1], nodeIdx]);
+
+  return nodeIdx;
 };
 
 const addPoints = (n, l) => {
@@ -122,12 +124,12 @@ const addPoints = (n, l) => {
   }
 
   const [pt, line, link] = random.pick(intersections);
-  addIntersection(pt, link);
+  const node1Idx = addIntersection(pt, link);
   const value = findNeighboringIntersection(intersections, link);
   if (!value) return undefined;
   const [pt2, line2, link2] = value;
-  addIntersection(pt2, link2);
-
+  const node2Idx = addIntersection(pt2, link2);
+  links.push([node1Idx, node2Idx]);
   return [link, link2];
 };
 
