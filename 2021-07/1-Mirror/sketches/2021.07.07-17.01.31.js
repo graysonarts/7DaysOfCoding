@@ -4,11 +4,11 @@ const math = require("canvas-sketch-util/math");
 const vec2 = require("./vec2");
 const draw = require("./draw");
 
-const LINE_THRESHOLD = 0.75;
+const LINE_THRESHOLD = 0.15;
 const MAX_POINTS = 1000;
 const RELAX_SCALE = 0.00025;
 const FPS = 30.0;
-const NEW_EVERY = Math.floor(FPS / 2.0);
+const NEW_EVERY = Math.floor(FPS / 16.0);
 
 let nodes = [];
 let links = [];
@@ -85,7 +85,7 @@ const relaxLinks = (n, l, context, mapToScreen) => {
 };
 
 const adjacentTo = (l, r) =>
-  l[0] === r[0] || l[1] === r[0] || l[0] === r[1] || l[1] || r[1];
+  l[0] === r[0] || l[1] === r[0] || l[0] === r[1] || l[1] === r[1];
 
 const findNeighboringIntersection = (intersections, link) => {
   let candidate = random.pick(
@@ -93,6 +93,19 @@ const findNeighboringIntersection = (intersections, link) => {
   );
   if (candidate[2] === link) return undefined;
   return candidate;
+};
+
+const findAdjacentInterections = (intersections) => {
+  // TODO: Need to make this into a flat list interections that are adjacent
+  const retVal = new Set();
+  intersections.forEach((i1) => {
+    intersections
+      .filter((i2) => i1[2] !== i2[2])
+      .filter((i2) => adjacentTo(i1[2], i2[2]))
+      .forEach((i2) => retVal.add([i1, i2]));
+  });
+
+  return [...retVal.values()];
 };
 
 const addIntersection = (pt, link) => {
@@ -120,17 +133,22 @@ const addPoints = (n, l) => {
   }
 
   if (intersections.length < 2) {
-    return undefined;
+    return { addedLink: undefined, candidate };
   }
 
-  const [pt, line, link] = random.pick(intersections);
-  const node1Idx = addIntersection(pt, link);
-  const value = findNeighboringIntersection(intersections, link);
-  if (!value) return undefined;
-  const [pt2, line2, link2] = value;
-  const node2Idx = addIntersection(pt2, link2);
-  links.push([node1Idx, node2Idx]);
-  return [link, link2];
+  const adjacents = findAdjacentInterections(intersections);
+  const picked = random.pick(adjacents);
+  if (!picked) {
+    return { addedLink: undefined, candidate };
+  }
+
+  const [p1, l1, lk1] = picked[0];
+  const [p2, l2, lk2] = picked[1];
+  const nodeIdx1 = addIntersection(p1, lk1);
+  const nodeIdx2 = addIntersection(p2, lk2);
+  links.push([nodeIdx1, nodeIdx2]);
+
+  return { addedLink: [lk1, lk2], candidate };
 };
 
 const sketch = () => {
@@ -138,22 +156,8 @@ const sketch = () => {
   nodes = [[random.gaussian(), random.gaussian(), true]];
 
   links = [];
-  // const visitedNodes = new Set();
-  // let dest = Math.floor(random.value() * nodes.length);
-  // let previous = dest;
-  // visitedNodes.add(dest);
-  // while (visitedNodes.size < nodes.length) {
-  //   while (visitedNodes.has(dest) && visitedNodes.size < nodes.length) {
-  //     dest = Math.floor(Math.abs(random.value() * nodes.length));
-  //   }
-  //   visitedNodes.add(dest);
-  //   if (previous !== dest) {
-  //     links.push([previous, dest]);
-  //     previous = dest;
-  //   }
-  // }
   let hasSetHandler = false;
-  return ({ context, width, height, frame }) => {
+  return ({ context, width, height, frame, pause }) => {
     let prevNode = 0;
 
     const mapToScreen = (p) => [
@@ -178,19 +182,35 @@ const sketch = () => {
     context.fillStyle = "white";
     context.fillRect(0, 0, width, height);
 
-    if (nodes.length < MAX_POINTS && frame % NEW_EVERY === 0)
+    if (nodes.length < MAX_POINTS && Math.floor(frame) % NEW_EVERY === 0)
       addedPoints = addPoints(nodes, links);
 
-    // nodes.forEach((n) => {
+    // nodes.forEach((n, idx) => {
     //   context.fillStyle = n.length > 2 ? (n[2] ? "red" : "green") : "black";
+    //   context.font = "24pt san-serif";
     //   const pt = mapToScreen(n);
-    //   draw.dot(context, pt);
+    //   context.fillText(`${idx}`, pt[0], pt[1]);
     // });
     context.strokeStyle = "black";
     context.lineWidth = 5;
     links.forEach((l) => {
       draw.line(context, mapToScreen(nodes[l[0]]), mapToScreen(nodes[l[1]]));
     });
+
+    // if (addedPoints) {
+    //   if (addedPoints.candidate) {
+    //     context.strokeStyle = "pink";
+    //     draw.line(
+    //       context,
+    //       mapToScreen(addedPoints.candidate[0]),
+    //       mapToScreen(addedPoints.candidate[1])
+    //     );
+    //   }
+    // if (addedPoints.addedLink) {
+    //   console.log(nodes, links);
+    //   pause();
+    // }
+    // }
 
     // if (addedPoints) {
     //   context.strokeStyle = "orange";
