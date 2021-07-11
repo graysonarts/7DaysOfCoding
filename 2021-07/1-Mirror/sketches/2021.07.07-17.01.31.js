@@ -6,7 +6,7 @@ const draw = require("./draw");
 
 const LINE_THRESHOLD = 0.65;
 const MAX_POINTS = 5000;
-const RELAX_SCALE = 0.0001;
+const RELAX_SCALE = 0.00025;
 const FPS = 30.0;
 const NEW_EVERY = Math.floor(FPS / 16.0);
 
@@ -193,7 +193,7 @@ const sketch = () => {
     context.fillStyle = "white";
     context.fillRect(0, 0, width, height);
 
-    if (nodes.length < MAX_POINTS && Math.floor(frame) % NEW_EVERY === 0)
+    if (Math.floor(frame) % NEW_EVERY === 0)
       addedPoints = addPoints(nodes, links);
 
     // nodes.forEach((n, idx) => {
