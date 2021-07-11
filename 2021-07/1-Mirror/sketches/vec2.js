@@ -14,6 +14,34 @@ const normalize = (v1) => {
   const m = mag(v1);
   return v1.map((u) => u / m);
 };
+const extend = (v, box) => {
+  const slope = (v[1][1] - v[0][1]) / (v[1][0] - v[0][0]);
+  const intercept = v[1][1] - slope * v[1][0];
+
+  const leftInt = slope * box[0][0] + intercept;
+  const rightInt = slope * box[1][0] + intercept;
+  const topInt = (box[0][1] - intercept) / slope;
+  const bottomInt = (box[1][1] - intercept) / slope;
+
+  const pt = [];
+  if (leftInt >= box[0][0] && leftInt <= box[1][0]) {
+    pt.push([box[0][0], leftInt]);
+  }
+
+  if (topInt >= box[0][1] && topInt <= box[1][1]) {
+    pt.push([box[0][1], topInt]);
+  }
+
+  if (rightInt >= box[0][0] && rightInt <= box[1][0]) {
+    pt.push([box[1][0], rightInt]);
+  }
+
+  if (bottomInt >= box[0][1] && bottomInt <= box[1][1]) {
+    pt.push([box[1][1], bottomInt]);
+  }
+
+  return pt;
+};
 module.exports = {
   sub,
   cross,
@@ -24,4 +52,5 @@ module.exports = {
   vectorTo,
   normalize,
   mag,
+  extend,
 };

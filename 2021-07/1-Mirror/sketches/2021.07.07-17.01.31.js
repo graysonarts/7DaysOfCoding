@@ -4,14 +4,15 @@ const math = require("canvas-sketch-util/math");
 const vec2 = require("./vec2");
 const draw = require("./draw");
 
-const LINE_THRESHOLD = 0.15;
+const LINE_THRESHOLD = 0.65;
 const MAX_POINTS = 1000;
-const RELAX_SCALE = 0.00025;
+const RELAX_SCALE = 0.0001;
 const FPS = 30.0;
 const NEW_EVERY = Math.floor(FPS / 16.0);
 
 let nodes = [];
 let links = [];
+let placedPointCount = 0;
 random.setSeed(random.getRandomSeed());
 
 const settings = {
@@ -23,10 +24,18 @@ const settings = {
 // aa, and bb are in the form of [[x1, y1], [x2, y2]]
 // implementation adapted from https://github.com/inconvergent/inconvergent-sandbox/blob/master/www/js/utils.js#L80
 const intersection = (aa, bb) => {
+  if (aa.length < 2 || bb.length < 2) {
+    return undefined;
+  }
+
   const a0 = aa[0];
   const a1 = aa[1];
   const b0 = bb[0];
   const b1 = bb[1];
+
+  if (a1.length < 2 || a0.length < 2 || b1.length < 2 || b0.length < 2) {
+    return undefined;
+  }
 
   const sa = vec2.sub(a1, a0);
   const sb = vec2.sub(b1, b0);
@@ -87,14 +96,6 @@ const relaxLinks = (n, l, context, mapToScreen) => {
 const adjacentTo = (l, r) =>
   l[0] === r[0] || l[1] === r[0] || l[0] === r[1] || l[1] === r[1];
 
-const findNeighboringIntersection = (intersections, link) => {
-  let candidate = random.pick(
-    intersections.filter((i) => adjacentTo(i[2], link))
-  );
-  if (candidate[2] === link) return undefined;
-  return candidate;
-};
-
 const findAdjacentInterections = (intersections) => {
   // TODO: Need to make this into a flat list interections that are adjacent
   const retVal = new Set();
@@ -118,10 +119,16 @@ const addIntersection = (pt, link) => {
 };
 
 const addPoints = (n, l) => {
-  const candidate = [
-    [random.gaussian(), random.gaussian()],
-    [random.gaussian(), random.gaussian()],
-  ];
+  const candidate = vec2.extend(
+    [
+      [random.gaussian(), random.gaussian()],
+      [random.gaussian(), random.gaussian()],
+    ],
+    [
+      [-2, -2],
+      [2, 2],
+    ]
+  );
   const intersections = [];
   for (const link of l) {
     const line = [n[link[0]], n[link[1]]];
@@ -172,9 +179,13 @@ const sketch = () => {
     if (!hasSetHandler) {
       context.canvas.addEventListener("mouseup", (evt) => {
         const newNode =
-          nodes.push([...mapToDomain([evt.offsetX, evt.offsetY]), true]) - 1;
+          nodes.push([
+            ...mapToDomain([evt.offsetX, evt.offsetY]),
+            placedPointCount < 4,
+          ]) - 1;
         links.push([prevNode, newNode]);
         prevNode = newNode;
+        placedPointCount = true;
       });
       hasSetHandler = true;
     }
@@ -198,7 +209,7 @@ const sketch = () => {
     });
 
     // if (addedPoints) {
-    //   if (addedPoints.candidate) {
+    //   if (addedPoints.candidate && addedPoints.candidate.length >= 2) {
     //     context.strokeStyle = "pink";
     //     draw.line(
     //       context,
@@ -206,10 +217,10 @@ const sketch = () => {
     //       mapToScreen(addedPoints.candidate[1])
     //     );
     //   }
-    // if (addedPoints.addedLink) {
-    //   console.log(nodes, links);
-    //   pause();
-    // }
+    //   // if (addedPoints.addedLink) {
+    //   //   console.log(nodes, links);
+    //   //   pause();
+    //   // }
     // }
 
     // if (addedPoints) {
