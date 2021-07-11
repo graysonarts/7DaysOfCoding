@@ -3,15 +3,15 @@ const random = require("canvas-sketch-util/random");
 const math = require("canvas-sketch-util/math");
 const vec2 = require("./vec2");
 const draw = require("./draw");
+const initialize = require("./initialize");
 
-const LINE_THRESHOLD = 0.65;
+const LINE_THRESHOLD = 2;
 const MAX_POINTS = 5000;
-const RELAX_SCALE = 0.00025;
-const FPS = 30.0;
-const NEW_EVERY = Math.floor(FPS / 16.0);
+const RELAX_SCALE = 1;
+const FPS = 15.0;
+const NEW_EVERY = Math.floor(FPS / 8.0);
 
-let nodes = [];
-let links = [];
+let { nodes, links } = initialize();
 let placedPointCount = 0;
 random.setSeed(random.getRandomSeed());
 
@@ -19,41 +19,6 @@ const settings = {
   dimensions: [2048, 2048],
   animate: true,
   fps: FPS,
-};
-
-// aa, and bb are in the form of [[x1, y1], [x2, y2]]
-// implementation adapted from https://github.com/inconvergent/inconvergent-sandbox/blob/master/www/js/utils.js#L80
-const intersection = (aa, bb) => {
-  if (aa.length < 2 || bb.length < 2) {
-    return undefined;
-  }
-
-  const a0 = aa[0];
-  const a1 = aa[1];
-  const b0 = bb[0];
-  const b1 = bb[1];
-
-  if (a1.length < 2 || a0.length < 2 || b1.length < 2 || b0.length < 2) {
-    return undefined;
-  }
-
-  const sa = vec2.sub(a1, a0);
-  const sb = vec2.sub(b1, b0);
-  const u = vec2.cross(sa, sb);
-
-  if (Math.abs(u) <= 0) {
-    return undefined;
-  }
-
-  const ba = vec2.sub(a0, b0);
-  const q = vec2.cross(sa, ba) / u;
-  const p = vec2.cross(sb, ba) / u;
-
-  return {
-    intersect: p >= 0 && p <= 1 && q >= 0 && q <= 1,
-    p,
-    q,
-  };
 };
 
 const isLinkConnectedToNode = (node) => (link) =>
@@ -119,20 +84,24 @@ const addIntersection = (pt, link) => {
 };
 
 const addPoints = (n, l) => {
-  const candidate = vec2.extend(
-    [
-      [random.gaussian(), random.gaussian()],
-      [random.gaussian(), random.gaussian()],
-    ],
-    [
-      [-2, -2],
-      [2, 2],
-    ]
-  );
+  const candidate = [
+    [random.gaussian(), random.gaussian()],
+    [random.gaussian(), random.gaussian()],
+  ];
+  // const candidate = vec2.extend(
+  //   [
+  //     [random.gaussian(), random.gaussian()],
+  //     [random.gaussian(), random.gaussian()],
+  //   ],
+  //   [
+  //     [-2, -2],
+  //     [2, 2],
+  //   ]
+  // );
   const intersections = [];
   for (const link of l) {
     const line = [n[link[0]], n[link[1]]];
-    const i = intersection(candidate, line);
+    const i = vec2.intersection(candidate, line);
     if (i && i.intersect) {
       const pt = vec2.lerp(candidate[0], candidate[1], i.p);
       intersections.push([pt, line, link]);
@@ -160,9 +129,6 @@ const addPoints = (n, l) => {
 
 const sketch = () => {
   let addedPoints = undefined;
-  nodes = [[random.gaussian(), random.gaussian(), true]];
-
-  links = [];
   let hasSetHandler = false;
   return ({ context, width, height, frame, pause }) => {
     let prevNode = 0;
