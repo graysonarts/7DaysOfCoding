@@ -5,7 +5,7 @@ const vec2 = require("./vec2");
 const draw = require("./draw");
 
 const LINE_THRESHOLD = 0.65;
-const MAX_POINTS = 1000;
+const MAX_POINTS = 5000;
 const RELAX_SCALE = 0.0001;
 const FPS = 30.0;
 const NEW_EVERY = Math.floor(FPS / 16.0);
