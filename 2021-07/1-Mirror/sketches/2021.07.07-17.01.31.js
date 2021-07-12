@@ -5,11 +5,11 @@ const vec2 = require("./vec2");
 const draw = require("./draw");
 const initialize = require("./initialize");
 
-const LINE_THRESHOLD = 2;
-const MAX_POINTS = 5000;
-const RELAX_SCALE = 1;
-const FPS = 15.0;
-const NEW_EVERY = Math.floor(FPS / 8.0);
+const LINE_THRESHOLD = 0.75;
+const MAX_NODES = 10000;
+const RELAX_SCALE = 0.00025;
+const FPS = 30.0;
+const NEW_EVERY = Math.floor(FPS / 3.0);
 
 let { nodes, links } = initialize();
 let placedPointCount = 0;
@@ -84,20 +84,20 @@ const addIntersection = (pt, link) => {
 };
 
 const addPoints = (n, l) => {
-  const candidate = [
-    [random.gaussian(), random.gaussian()],
-    [random.gaussian(), random.gaussian()],
-  ];
-  // const candidate = vec2.extend(
-  //   [
-  //     [random.gaussian(), random.gaussian()],
-  //     [random.gaussian(), random.gaussian()],
-  //   ],
-  //   [
-  //     [-2, -2],
-  //     [2, 2],
-  //   ]
-  // );
+  // const candidate = [
+  //   [random.gaussian(), random.gaussian()],
+  //   [random.gaussian(), random.gaussian()],
+  // ];
+  const candidate = vec2.extend(
+    [
+      [random.gaussian(), random.gaussian()],
+      [random.gaussian(), random.gaussian()],
+    ],
+    [
+      [-2, -2],
+      [2, 2],
+    ]
+  );
   const intersections = [];
   for (const link of l) {
     const line = [n[link[0]], n[link[1]]];
@@ -129,6 +129,7 @@ const addPoints = (n, l) => {
 
 const sketch = () => {
   let addedPoints = undefined;
+  let debug = false;
   let hasSetHandler = false;
   return ({ context, width, height, frame, pause }) => {
     let prevNode = 0;
@@ -153,13 +154,23 @@ const sketch = () => {
         prevNode = newNode;
         placedPointCount = true;
       });
+      window.document.addEventListener("keyup", (evt) => {
+        switch (evt.key) {
+          case "Enter":
+            debug = !debug;
+            break;
+          default:
+            console.log(`key press ${evt.key}`);
+            break;
+        }
+      });
       hasSetHandler = true;
     }
 
     context.fillStyle = "white";
     context.fillRect(0, 0, width, height);
 
-    if (Math.floor(frame) % NEW_EVERY === 0)
+    if (nodes.length < MAX_NODES && Math.floor(frame) % NEW_EVERY === 0)
       addedPoints = addPoints(nodes, links);
 
     // nodes.forEach((n, idx) => {
@@ -169,25 +180,25 @@ const sketch = () => {
     //   context.fillText(`${idx}`, pt[0], pt[1]);
     // });
     context.strokeStyle = "black";
-    context.lineWidth = 5;
+    context.lineWidth = 2;
     links.forEach((l) => {
       draw.line(context, mapToScreen(nodes[l[0]]), mapToScreen(nodes[l[1]]));
     });
 
-    // if (addedPoints) {
-    //   if (addedPoints.candidate && addedPoints.candidate.length >= 2) {
-    //     context.strokeStyle = "pink";
-    //     draw.line(
-    //       context,
-    //       mapToScreen(addedPoints.candidate[0]),
-    //       mapToScreen(addedPoints.candidate[1])
-    //     );
-    //   }
-    //   // if (addedPoints.addedLink) {
-    //   //   console.log(nodes, links);
-    //   //   pause();
-    //   // }
-    // }
+    if (debug && addedPoints) {
+      if (addedPoints.candidate && addedPoints.candidate.length >= 2) {
+        context.strokeStyle = "pink";
+        draw.line(
+          context,
+          mapToScreen(addedPoints.candidate[0]),
+          mapToScreen(addedPoints.candidate[1])
+        );
+      }
+      // if (addedPoints.addedLink) {
+      //   console.log(nodes, links);
+      //   pause();
+      // }
+    }
 
     // if (addedPoints) {
     //   context.strokeStyle = "orange";
